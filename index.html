@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick2Sell Benelux</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial;background:#F7F5F1;color:#1a1a1a}
+.app{max-width:480px;margin:auto;padding:24px 18px 40px}
+h1{font-size:34px;margin:20px 0 4px}
+.sub{color:#666;margin:0 0 22px}
+.card{background:white;border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 8px 28px #0001}
+label{font-weight:700;display:block;margin-bottom:8px}
+input,textarea,button{width:100%;font-size:16px;border-radius:14px;padding:14px;margin-top:10px;border:1px solid #ddd;box-sizing:border-box}
+textarea{min-height:80px}
+button{border:0;background:#FF6A00;color:white;font-weight:800}
+button.green{background:#2F6F4F}
+button.gray{background:#333}
+.preview{display:flex;flex-wrap:wrap;margin-top:12px}
+.preview img{width:86px;height:86px;object-fit:cover;border-radius:14px;margin:5px;border:1px solid #ddd}
+.result{white-space:pre-wrap;line-height:1.5;font-size:15px}
+.badge{display:inline-block;background:#FF6A00;color:white;border-radius:999px;padding:4px 10px;font-size:12px;margin-left:6px}
+.footer{font-size:12px;color:#777;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🏷️ Quick2Sell <span class="badge">Benelux</span></h1>
+  <p class="sub">Foto. Taxeer. Verkoop.</p>
+
+  <div class="card">
+    <label>1. Upload productfoto's</label>
+    <input id="photos" type="file" accept="image/*" multiple>
+    <div id="preview" class="preview"></div>
+  </div>
+
+  <div class="card">
+    <label>2. Extra info</label>
+    <textarea id="notes" placeholder="Bijv. merk, maat, staat, aankoopjaar, gebreken..."></textarea>
+    <button onclick="analyze()">Analyseer product</button>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <label>3. Quick2Sell analyse</label>
+    <div id="result" class="result"></div>
+    <button class="green" onclick="makeAd()">Akkoord — maak advertenties</button>
+  </div>
+
+  <div class="card" id="adCard" style="display:none">
+    <label>4. Advertenties</label>
+    <div id="ad" class="result"></div>
+    <button class="gray" onclick="copyAd()">Kopieer advertentie</button>
+  </div>
+
+  <p class="footer">Demo-versie. Echte AI-analyse volgt in de volgende stap.</p>
+</div>
+
+<script>
+const photos=document.getElementById("photos");
+const preview=document.getElementById("preview");
+
+photos.onchange=()=>{
+  preview.innerHTML="";
+  [...photos.files].slice(0,5).forEach(file=>{
+    const img=document.createElement("img");
+    img.src=URL.createObjectURL(file);
+    preview.appendChild(img);
+  });
+};
+
+function analyze(){
+  const count=photos.files.length;
+  const notes=document.getElementById("notes").value.trim();
+
+  if(count===0){
+    alert("Upload eerst minimaal één foto.");
+    return;
+  }
+
+  document.getElementById("resultCard").style.display="block";
+
+  document.getElementById("result").innerText =
+`✅ IDENTIFICATIE
+- Product geanalyseerd op basis van ${count} foto('s)
+- Extra info: ${notes || "niet ingevuld"}
+- Staat: visueel beoordeeld
+- Zekerheid: demo-modus
+
+💰 MARKTANALYSE BENELUX
+- Snelle verkoopprijs: €7,50
+- Ideale verkoopprijs: €10
+- Maximale vraagprijs: €12
+- Geschikt voor: Marktplaats, 2dehands en Vinted
+
+⭐ QUICK2SELL SCORE
+★★★☆☆
+
+🕒 VERWACHTE VERKOOPTIJD
+- 1 tot 2 weken bij snelle prijs
+- 2 tot 4 weken bij maximale prijs
+
+📈 VERKOOPTIPS
+- Maak duidelijke foto's bij daglicht
+- Benoem eerlijk beschadigingen
+- Start iets hoger voor onderhandelruimte
+- Ophalen werkt vaak sneller dan verzenden
+
+🤝 ONDERHANDELSTRATEGIE
+- Startprijs: €12
+- Ideale verkoopprijs: €10
+- Minimale prijs: €7
+
+📝 Advertentie gereed? Nee, wacht op jouw goedkeuring.`;
+}
+
+function makeAd(){
+  document.getElementById("adCard").style.display="block";
+
+  document.getElementById("ad").innerText =
+`MARKTPLAATS ADVERTENTIE
+
+Titel:
+Net product in goede staat
+
+Beschrijving:
+Te koop aangeboden: net product in goede staat.
+
+Kenmerken:
+- Zie foto's voor de staat
+- Schoon en bruikbaar
+- Ophalen mogelijk
+- Verzenden in overleg
+
+Vraagprijs: €12
+
+
+2DEHANDS ADVERTENTIE
+
+Titel:
+Product in nette staat
+
+Beschrijving:
+Product aangeboden in nette gebruikte staat. Bekijk de foto's voor details.
+
+Prijs: €12
+
+
+VINTED ADVERTENTIE
+
+Titel:
+Net product
+
+Beschrijving:
+Net product, klaar voor een nieuwe eigenaar. Staat zoals op de foto's.
+
+Prijs: €12`;
+}
+
+function copyAd(){
+  navigator.clipboard.writeText(document.getElementById("ad").innerText);
+  alert("Advertentie gekopieerd.");
+}
+</script>
+</body>
+</html>
