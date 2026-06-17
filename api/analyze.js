@@ -10,85 +10,134 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "OPENAI_API_KEY ontbreekt in Vercel" });
     }
 
-    if (!images.length) {
-      return res.status(400).json({ error: "Geen foto's ontvangen" });
+    if (!Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ error: "Upload minimaal één foto" });
     }
 
-    const content = [
-      {
-        type: "input_text",
-        text:
-`Je bent Quick2Sell, een AI-verkoopassistent voor Nederland en België.
+    const prompt = `
+Je bent Quick2Sell Pro v3, een professionele AI-verkoopassistent voor Nederland en België.
 
-Analyseer dit tweedehands product op basis van de foto's en extra info.
+Analyseer de foto's en extra info. Herken elk soort tweedehands product:
+auto's, fietsen, elektronica, meubels, kleding, babyspullen, gereedschap, muziekinstrumenten, speelgoed, games, luxe artikelen en huisraad.
+
+BELANGRIJK:
+- Geef geen demo-prijzen.
+- Als het een auto is: schat in duizenden euro's.
+- Gebruik kenteken, interieur, uitvoering, bouwjaar, opties en zichtbare staat als dat zichtbaar is.
+- Zoek indien mogelijk actuele vergelijkbare prijzen via web search.
+- Denk aan Marktplaats, 2dehands, Vinted, eBay, AutoScout24, Gaspedaal, Facebook Marketplace.
+- Als live vergelijking onzeker is, zeg dat eerlijk.
+- Geef realistische bedragen in euro's.
+- Noem zichtbare gebreken.
+- Vraag altijd goedkeuring vóór plaatsing.
 
 Extra info gebruiker:
-${notes || "Geen extra info"}
+${notes || "Geen extra info ingevuld."}
 
-Geef antwoord in het Nederlands met exact deze onderdelen:
+Geef exact deze structuur:
 
 ✅ IDENTIFICATIE
-- Product
-- Merk
-- Model/type
-- Kleur
-- Materiaal
-- Staat
-- Beschadigingen
-- Zekerheid
+- Product:
+- Categorie:
+- Merk:
+- Model/type:
+- Kleur:
+- Materiaal/uitvoering:
+- Geschatte leeftijd/bouwjaar:
+- Staat:
+- Beschadigingen/gebreken:
+- Accessoires/ontbrekend:
+- Zekerheid:
+
+🔍 MARKTVERGELIJKING
+- Vergelijkbare markt:
+- Vraag & aanbod:
+- Populaire zoekwoorden:
+- Opmerking live data:
 
 💰 WAARDE-INSCHATTING
-- Snelle verkoopprijs
-- Ideale verkoopprijs
-- Maximale vraagprijs
-- Korte uitleg
+- Snelle verkoopprijs:
+- Ideale vraagprijs:
+- Maximale realistische vraagprijs:
+- Minimale acceptatieprijs:
+- Uitleg:
+
+🌍 PLATFORMADVIES BENELUX
+- Beste platform:
+- Marktplaats:
+- 2dehands:
+- Vinted:
+- eBay:
+- Facebook Marketplace:
 
 ⭐ QUICK2SELL SCORE
-- Score 1 t/m 5 sterren
-- Verkoopsnelheid
-- Populariteit
-- Risico
+- Score:
+- Verkoopsnelheid:
+- Populariteit:
+- Winstpotentie:
+- Risico:
 
 📈 VERKOOPTIPS
-- Beste platform
-- Beste foto's
-- Ophalen/verzenden
-- Onderhandeladvies
+- Beste foto's:
+- Beste plaatsmoment:
+- Ophalen/verzenden:
+- Schoonmaak/reparatie:
+- Bundeladvies:
 
-📝 ADVERTENTIE-ADVIES
-- Titel
-- Korte beschrijving
+🤝 ONDERHANDELSTRATEGIE
+- Startprijs:
+- Ideale verkoopprijs:
+- Minimale prijs:
+- Reactie op laag bod:
 
-Wees realistisch. Als het een auto is, geef autowaarden in duizenden euro's, niet in kleine productprijzen.`
-      }
-    ];
+📝 ADVERTENTIE
+TITEL:
 
-    images.slice(0, 5).forEach((img) => {
+BESCHRIJVING:
+
+ZOEKWOORDEN:
+
+Sluit af met:
+📝 Advertentie gereed? Ja, maar plaats pas na jouw goedkeuring.
+`;
+
+    const content = [{ type: "input_text", text: prompt }];
+
+    images.slice(0, 8).forEach((img) => {
       content.push({
         type: "input_image",
         image_url: img
       });
     });
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: [
-          {
-            role: "user",
-            content
-          }
-        ],
-        max_output_tokens: 1200
-      })
-    });
+    async function callOpenAI(useWebSearch) {
+      const body = {
+        model: "gpt-4.1",
+        input: [{ role: "user", content }],
+        max_output_tokens: 2500
+      };
 
-    const data = await response.json();
+      if (useWebSearch) {
+        body.tools = [{ type: "web_search" }];
+      }
+
+      return fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    }
+
+    let response = await callOpenAI(true);
+    let data = await response.json();
+
+    if (!response.ok) {
+      response = await callOpenAI(false);
+      data = await response.json();
+    }
 
     if (!response.ok) {
       return res.status(500).json({
@@ -97,19 +146,19 @@ Wees realistisch. Als het een auto is, geef autowaarden in duizenden euro's, nie
       });
     }
 
-    const text =
+    const result =
       data.output_text ||
-      data.output?.map(o =>
-        o.content?.map(c => c.text).join("\n")
+      data.output?.map(item =>
+        item.content?.map(part => part.text || "").join("\n")
       ).join("\n") ||
       "Geen analyse ontvangen.";
 
-    return res.status(200).json({ result: text });
+    return res.status(200).json({ result });
 
-  } catch (err) {
+  } catch (error) {
     return res.status(500).json({
       error: "Serverfout",
-      message: err.message
+      message: error.message
     });
   }
 }
